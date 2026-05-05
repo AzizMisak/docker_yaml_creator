@@ -27,38 +27,40 @@
         </div>
 
         <!-- Infrastructure Palette -->
-        <div class="p-3 grid grid-cols-1 gap-2 border-b border-[#252a38] bg-[#0d0f14]">
+        <div class="p-3 grid grid-cols-1 gap-2 border-b border-[#252a38] bg-[#0d0f14]" style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; padding-top: 0.5rem;">
           <div
               v-for="preset in k8sInfraPresets"
               :key="preset.id"
               class="flex items-center gap-2.5 py-2 px-2.5 rounded-lg border border-[#252a38] bg-[#181c27] cursor-grab transition-all duration-150 select-none hover:border-[#39ff8e] hover:bg-[#1e2333] hover:shadow-[0_0_0_1px_rgba(57,255,142,0.12)] active:cursor-grabbing"
               draggable="true"
               @dragstart="onPaletteDragStart($event, preset)"
+              style="margin-right: 0.5rem; margin-left: 0.5rem"
           >
             <span class="text-[18px] shrink-0">{{ preset.icon }}</span>
             <div class="flex flex-col flex-1 min-w-0">
               <span class="text-[12px] font-bold text-[#e8ecf5]">{{ preset.label }}</span>
               <span class="text-[10px] text-[#525c75] font-['JetBrains_Mono',monospace] whitespace-nowrap overflow-hidden text-ellipsis">infra element</span>
             </div>
-            <span class="text-[#525c75] text-[14px] shrink-0">⠿</span>
+            <span class="text-[14px] shrink-0" style="color: #525c75; margin-right: 0.5rem;">⠿</span>
           </div>
         </div>
 
         <!-- Apps/Images Palette -->
-        <div class="p-3 grid grid-cols-1 gap-2 border-b border-[#252a38]">
+        <div class="p-3 grid grid-cols-1 gap-2 border-b border-[#252a38]" style=" padding-bottom: 0.5rem;">
           <div
               v-for="preset in presets"
               :key="preset.id"
               class="flex items-center gap-2.5 py-2 px-2.5 rounded-lg border border-[#252a38] bg-[#181c27] cursor-grab transition-all duration-150 select-none hover:border-[#00e5ff] hover:bg-[#1e2333] hover:shadow-[0_0_0_1px_rgba(0,229,255,0.12)] active:cursor-grabbing"
               draggable="true"
               @dragstart="onPaletteDragStart($event, preset)"
+              style="margin-right: 0.5rem; margin-left: 0.5rem"
           >
             <span class="text-[18px] shrink-0">{{ preset.icon }}</span>
             <div class="flex flex-col flex-1 min-w-0">
               <span class="text-[12px] font-bold text-[#e8ecf5]">{{ preset.label }}</span>
               <span class="text-[10px] text-[#525c75] font-['JetBrains_Mono',monospace] whitespace-nowrap overflow-hidden text-ellipsis">{{ preset.image }}</span>
             </div>
-            <span class="text-[#525c75] text-[14px] shrink-0">⠿</span>
+            <span class="text-[14px] shrink-0" style="color: #525c75; margin-right: 0.5rem;">⠿</span>
           </div>
         </div>
       </div>
@@ -80,7 +82,7 @@
         </div>
 
         <!-- Canvas Playground Content -->
-        <div class="flex-1 p-6 relative z-10 flex flex-col gap-6">
+        <div class="flex-1 p-6 relative z-10 flex flex-col gap-6" style="margin-left: 0.5rem; margin-right:0.5rem;">
 
           <!-- K8s Clusters -->
           <div v-for="(cluster, cIndex) in k8sClusters" :key="cluster.id" class="border-2 border-[#39ff8e]/30 rounded-xl bg-[#12151d] p-5 shadow-[0_8px_30px_rgba(57,255,142,0.05)]">
@@ -108,7 +110,7 @@
                         <span class="text-[18px]">🖥️</span>
                         <input v-model="node.name" class="bg-transparent border-none text-[#79b8ff] font-semibold text-[14px] outline-none w-full" @input="generateK8sYaml" />
                      </div>
-                     <button class="text-[#ff4545] text-[14px] hover:bg-[#ff4545]/10 px-2 py-0.5 rounded" @click="cluster.nodes.splice(nIndex, 1); generateK8sYaml()">✕</button>
+                     <button class="text-[#ff4545] text-[14px] hover:bg-[#ff4545]/10 px-2 py-0.5 rounded" @click="cluster.nodes.splice(nIndex, 1); generateK8sYaml()" style="padding-right: 5rem">✕</button>
                    </div>
 
                    <!-- Pods Drop Zone -->
@@ -289,6 +291,14 @@ const k8sTotalNodes = computed(() => k8sClusters.value.reduce((acc, c) => acc + 
 const k8sTotalPods = computed(() => k8sClusters.value.reduce((acc, c) => acc + c.nodes.reduce((acc2, n) => acc2 + n.pods.length, 0), 0))
 const k8sOutput = ref('')
 
+function getNextK8sName(items, prefix) {
+  let i = 1;
+  while (items.some(item => item.name === `${prefix}-${i}`)) {
+    i++;
+  }
+  return `${prefix}-${i}`;
+}
+
 function onPaletteDragStart(event, preset) {
   dragSource = 'palette'
   dragItem = preset
@@ -306,7 +316,7 @@ function onCanvasDrop(event) {
     if (dragItem.type === 'cluster') {
       k8sClusters.value.push({
         id: ++k8sUidCounter,
-        name: `cluster-${k8sUidCounter}`,
+        name: getNextK8sName(k8sClusters.value, 'cluster'),
         nodes: []
       })
       generateK8sYaml()
@@ -323,16 +333,20 @@ function onNodeDrop(cluster, event) {
      if (dragItem.type === 'node') {
         cluster.nodes.push({
           id: ++k8sUidCounter,
-          name: `node-${k8sUidCounter}`,
+          name: getNextK8sName(cluster.nodes, 'node'),
           pods: []
         })
      } else {
         // If an image app is dropped into Node, make it a pod!
-        cluster.nodes[cluster.nodes.length - 1 < 0 ? 0 : cluster.nodes.length - 1]?.pods.push({
-          id: ++k8sUidCounter,
-          name: `pod-${dragItem.id || 'custom'}-${k8sUidCounter}`,
-          image: dragItem.image || 'ubuntu:latest'
-        })
+        const targetNode = cluster.nodes[cluster.nodes.length - 1 < 0 ? 0 : cluster.nodes.length - 1];
+        if (targetNode) {
+          const podPrefix = `pod-${dragItem.id || 'custom'}`;
+          targetNode.pods.push({
+            id: ++k8sUidCounter,
+            name: getNextK8sName(targetNode.pods, podPrefix),
+            image: dragItem.image || 'ubuntu:latest'
+          })
+        }
      }
     generateK8sYaml()
   }
@@ -341,9 +355,10 @@ function onNodeDrop(cluster, event) {
 
 function onPodDrop(node, event) {
   if (dragItem && (dragItem.image || !dragItem.type || dragItem.type === 'service')) {
+    const podPrefix = `pod-${dragItem.id || 'custom'}`;
     node.pods.push({
       id: ++k8sUidCounter,
-      name: `pod-${dragItem.id || 'custom'}-${k8sUidCounter}`,
+      name: getNextK8sName(node.pods, podPrefix),
       image: dragItem.image || 'ubuntu:latest'
     })
     generateK8sYaml()
@@ -455,9 +470,17 @@ function onCardDrop(event, targetIndex) {
   event.stopPropagation()
 }
 
+function getNextServiceName(servicesList, baseId) {
+  if (!servicesList.some(s => s.name === baseId)) return baseId;
+  let i = 2;
+  while (servicesList.some(s => s.name === `${baseId}-${i}`)) {
+    i++;
+  }
+  return `${baseId}-${i}`;
+}
+
 function addService(preset) {
-  const countSame = services.value.filter(s => s._baseId === preset.id).length
-  const name      = countSame === 0 ? preset.id : `${preset.id}-${countSame + 1}`
+  const name = getNextServiceName(services.value, preset.id);
   services.value.push({
     _uid:        ++uidCounter,
     _baseId:     preset.id,

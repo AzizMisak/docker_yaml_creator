@@ -1,188 +1,407 @@
 <template>
-  <div class="app-root">
+  <div class="min-h-screen flex flex-col overflow-hidden bg-[#0d0f14] text-[#e8ecf5] font-['Syne',sans-serif]">
     <!-- Top Bar -->
-    <header class="topbar">
-      <div class="topbar-left">
-        <span class="logo-icon">⬡</span>
-        <span class="logo-text">DockerForge</span>
-        <span class="logo-badge">YAML Builder</span>
+    <header class="flex items-center justify-between px-6 h-[52px] border-b border-[#252a38] bg-[#12151d] shrink-0 z-10">
+      <div class="flex items-center gap-2.5">
+        <span class="text-[22px] text-[#00e5ff] leading-none">⬡</span>
+        <span class="text-[17px] font-extrabold tracking-[-0.5px] text-[#e8ecf5]">DockerForge</span>
+        <span class="font-['JetBrains_Mono',monospace] text-[10px] font-medium py-0.5 px-2 rounded-full bg-[#00e5ff]/10 border border-[#00e5ff]/25 text-[#00e5ff] tracking-widest uppercase">Unified Workspace</span>
       </div>
-      <div class="topbar-right">
-        <button class="btn-ghost" @click="clearAll">
+
+      <div class="flex gap-2">
+        <button class="flex items-center gap-1.5 bg-transparent border border-[#2e3549] text-[#8891aa] py-1.5 px-3.5 rounded-lg text-[13px] font-semibold cursor-pointer transition-all duration-150 hover:text-[#e8ecf5] hover:border-[#00e5ff] hover:bg-[#00e5ff]/10" @click="clearAll">
           <span>✕</span> Clear
         </button>
-        <button class="btn-primary" @click="downloadYaml">
-          <span>↓</span> Download YAML
+        <button class="flex items-center gap-1.5 bg-[#00e5ff] border-none text-black py-1.5 px-4 rounded-lg text-[13px] font-bold cursor-pointer transition-all duration-150 hover:bg-[#00b8cc]" @click="downloadYaml">
+          <span>↓</span> Download All
         </button>
       </div>
     </header>
 
-    <div class="workspace">
-      <!-- LEFT PANEL -->
-      <div class="panel panel-left">
-        <div class="panel-header">
-          <span class="panel-title">Services</span>
-          <span class="panel-hint">Drag to canvas</span>
+    <div class="flex flex-1 overflow-hidden h-[calc(100vh-52px)]">
+      <!-- TOOLBOX (Left Panel) -->
+      <div class="flex flex-col overflow-hidden w-[280px] border-r border-[#252a38] bg-[#12151d] shrink-0 overflow-y-auto relative">
+        <div class="flex items-center justify-between p-3 px-5 border-b border-[#252a38] shrink-0">
+          <span class="text-[11px] font-bold uppercase tracking-[1.5px] text-[#8891aa]">Toolbox</span>
+          <span class="text-[11px] text-[#525c75] font-['JetBrains_Mono',monospace]">Drag items</span>
         </div>
 
-        <!-- Service Palette -->
-        <div class="palette">
+        <!-- Infrastructure Palette -->
+        <div class="p-3 grid grid-cols-1 gap-2 border-b border-[#252a38] bg-[#0d0f14]">
           <div
-              v-for="preset in presets"
+              v-for="preset in k8sInfraPresets"
               :key="preset.id"
-              class="palette-item"
+              class="flex items-center gap-2.5 py-2 px-2.5 rounded-lg border border-[#252a38] bg-[#181c27] cursor-grab transition-all duration-150 select-none hover:border-[#39ff8e] hover:bg-[#1e2333] hover:shadow-[0_0_0_1px_rgba(57,255,142,0.12)] active:cursor-grabbing"
               draggable="true"
               @dragstart="onPaletteDragStart($event, preset)"
           >
-            <span class="palette-icon">{{ preset.icon }}</span>
-            <div class="palette-info">
-              <span class="palette-name">{{ preset.label }}</span>
-              <span class="palette-image">{{ preset.image }}</span>
+            <span class="text-[18px] shrink-0">{{ preset.icon }}</span>
+            <div class="flex flex-col flex-1 min-w-0">
+              <span class="text-[12px] font-bold text-[#e8ecf5]">{{ preset.label }}</span>
+              <span class="text-[10px] text-[#525c75] font-['JetBrains_Mono',monospace] whitespace-nowrap overflow-hidden text-ellipsis">infra element</span>
             </div>
-            <span class="palette-drag-hint">⠿</span>
+            <span class="text-[#525c75] text-[14px] shrink-0">⠿</span>
           </div>
         </div>
 
-        <!-- Canvas Drop Zone -->
-        <div class="canvas-header">
-          <span class="panel-title">Canvas</span>
-          <span class="service-count">{{ services.length }} service{{ services.length !== 1 ? 's' : '' }}</span>
-        </div>
-        <div
-            class="canvas"
-            :class="{ 'canvas-dragover': isDragOver }"
-            @dragover.prevent="isDragOver = true"
-            @dragleave="isDragOver = false"
-            @drop.prevent="onCanvasDrop($event)"
-        >
-          <div v-if="services.length === 0" class="canvas-empty">
-            <span class="canvas-empty-icon">⬡</span>
-            <p>Drop services here</p>
-            <p class="canvas-empty-sub">Build your docker-compose stack</p>
-          </div>
-
+        <!-- K8s Workloads Palette -->
+        <div class="p-3 grid grid-cols-1 gap-2 border-b border-[#252a38] bg-[#0d0f14]">
           <div
-              v-for="(service, index) in services"
-              :key="service._uid"
-              class="service-card"
-              :class="{ 'service-card--active': activeService === service._uid }"
+              v-for="preset in k8sWorkloadPresets"
+              :key="preset.id"
+              class="flex items-center gap-2.5 py-2 px-2.5 rounded-lg border border-[#252a38] bg-[#181c27] cursor-grab transition-all duration-150 select-none hover:border-[#39ff8e] hover:bg-[#1e2333] hover:shadow-[0_0_0_1px_rgba(57,255,142,0.12)] active:cursor-grabbing"
               draggable="true"
-              @dragstart="onCardDragStart($event, index)"
-              @dragover.prevent="onCardDragOver($event, index)"
-              @drop.prevent="onCardDrop($event, index)"
-              @click="toggleService(service._uid)"
+              @dragstart="onPaletteDragStart($event, preset)"
           >
-            <div class="service-card-header">
-              <span class="service-icon">{{ service.icon }}</span>
-              <input
-                  v-model="service.name"
-                  class="service-name-input"
-                  placeholder="service-name"
-                  @click.stop
-                  @input="generateYaml"
-              />
-              <button class="card-remove" @click.stop="removeService(index)">✕</button>
+            <span class="text-[18px] shrink-0">{{ preset.icon }}</span>
+            <div class="flex flex-col flex-1 min-w-0">
+              <span class="text-[12px] font-bold text-[#e8ecf5]">{{ preset.label }}</span>
+              <span class="text-[10px] text-[#525c75] font-['JetBrains_Mono',monospace] whitespace-nowrap overflow-hidden text-ellipsis">k8s resource</span>
+            </div>
+            <span class="text-[#525c75] text-[14px] shrink-0">⠿</span>
+          </div>
+        </div>
+
+        <!-- Apps/Images Palette -->
+        <div class="p-3 grid grid-cols-1 gap-2 border-b border-[#252a38]">
+          <div
+              v-for="preset in presets"
+              :key="preset.id"
+              class="flex items-center gap-2.5 py-2 px-2.5 rounded-lg border border-[#252a38] bg-[#181c27] cursor-grab transition-all duration-150 select-none hover:border-[#00e5ff] hover:bg-[#1e2333] hover:shadow-[0_0_0_1px_rgba(0,229,255,0.12)] active:cursor-grabbing"
+              draggable="true"
+              @dragstart="onPaletteDragStart($event, preset)"
+          >
+            <span class="text-[18px] shrink-0">{{ preset.icon }}</span>
+            <div class="flex flex-col flex-1 min-w-0">
+              <span class="text-[12px] font-bold text-[#e8ecf5]">{{ preset.label }}</span>
+              <span class="text-[10px] text-[#525c75] font-['JetBrains_Mono',monospace] whitespace-nowrap overflow-hidden text-ellipsis">{{ preset.image }}</span>
+            </div>
+            <span class="text-[#525c75] text-[14px] shrink-0">⠿</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CANVAS (Middle Panel) -->
+      <div class="flex flex-col flex-1 overflow-y-auto bg-[#0a0c10] relative"
+           @dragover.prevent="isDragOver = true"
+           @dragleave="isDragOver = false"
+           @drop.prevent="onCanvasDrop($event)">
+
+        <div class="absolute inset-0 pointer-events-none transition-all"
+             :class="{ 'bg-[#00e5ff]/5 outline-dashed outline-2 outline-[#00e5ff]/25 -outline-offset-8': isDragOver }"></div>
+
+        <div class="flex items-center justify-between pt-4 px-6 pb-2 relative z-10 shrink-0">
+          <span class="text-[12px] font-bold uppercase tracking-[1.5px] text-[#8891aa]">Free Playground Canvas</span>
+          <span class="font-['JetBrains_Mono',monospace] text-[11px] text-[#525c75]">
+             Drop images for Docker, or Clusters for K8s
+          </span>
+        </div>
+
+        <!-- Canvas Playground Content -->
+        <div class="flex-1 p-6 relative z-10 flex flex-col gap-6">
+
+          <!-- K8s Clusters -->
+          <div v-for="(cluster, cIndex) in k8sClusters" :key="cluster.id" class="border-2 border-[#39ff8e]/30 rounded-xl bg-[#12151d] p-5 shadow-[0_8px_30px_rgba(57,255,142,0.05)] flex flex-col gap-4">
+            <!-- Cluster Header -->
+            <div class="flex items-center justify-between border-b border-[#252a38] pb-3 shrink-0">
+              <div class="flex items-center gap-3">
+                <span class="text-[24px]">⎈</span>
+                <input v-model="cluster.name" class="bg-transparent border-none text-[#39ff8e] font-bold text-[18px] outline-none" @input="generateK8sYaml" />
+                <span class="text-[10px] uppercase tracking-widest text-[#39ff8e]/50 px-2 py-0.5 border border-[#39ff8e]/20 rounded-full">K8S Cluster Namespace</span>
+              </div>
+              <button class="text-[#ff4545] hover:bg-[#ff4545]/10 px-3 py-1.5 rounded transition-colors text-[12px] font-bold" @click="k8sClusters.splice(cIndex, 1); generateK8sYaml()">✕ Remove Cluster</button>
             </div>
 
-            <!-- Expanded Config -->
-            <div v-if="activeService === service._uid" class="service-card-body">
-              <div class="field-group">
-                <label>Image</label>
-                <input v-model="service.image" placeholder="nginx:latest" @input="generateYaml" />
+            <!-- Dynamic Unified Cluster Drop Zone -->
+            <div class="min-h-[140px] border border-dashed border-[#252a38] rounded-xl p-4 flex flex-col gap-4 transition-colors bg-[#0a0c10]"
+                 @dragover.prevent="onItemDragOver"
+                 @drop.prevent="onClusterDrop(cluster, $event)">
+
+              <div v-if="cluster.nodes.length === 0 && cluster.workloads.length === 0" class="text-[#525c75] text-[11px] flex items-center justify-center min-h-[100px] rounded-lg text-center px-4 w-full">
+                Drop Nodes, Deployments, ReplicaSets, Services, or Ingress Here
               </div>
 
-              <div class="field-group">
-                <label>Ports <span class="field-hint">(host:container)</span></label>
-                <div v-for="(port, pi) in service.ports" :key="pi" class="field-row">
-                  <input v-model="service.ports[pi]" placeholder="8080:80" @input="generateYaml" />
-                  <button class="field-remove" @click="service.ports.splice(pi, 1); generateYaml()">✕</button>
+              <!-- Unified Grid for Dropped Items -->
+              <div v-if="cluster.nodes.length > 0 || cluster.workloads.length > 0" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+
+                <!-- Render Nodes -->
+                <div v-for="(node, nIndex) in cluster.nodes" :key="node.id" class="border border-[#79b8ff]/40 rounded-xl bg-[#181c27] p-3 flex flex-col">
+                  <div class="flex items-center justify-between mb-2 border-b border-[#252a38]/50 pb-2">
+                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                      <span class="text-[16px] shrink-0">🖥️</span>
+                      <input v-model="node.name" class="bg-transparent border-none text-[#79b8ff] font-semibold text-[13px] outline-none flex-1 min-w-0 text-ellipsis" @input="generateK8sYaml" />
+                    </div>
+                    <button class="text-[#ff4545] text-[14px] hover:bg-[#ff4545]/10 px-2 py-0.5 rounded shrink-0 ml-2" @click="cluster.nodes.splice(nIndex, 1); generateK8sYaml()">✕</button>
+                  </div>
+
+                  <!-- Pods Drop Zone (inside node) -->
+                  <div class="flex-1 min-h-[70px] bg-[#0d0f14] border border-[#252a38]/80 rounded-lg p-2 flex flex-col gap-2"
+                       @dragover.prevent="onItemDragOver"
+                       @drop.prevent="onPodDrop(node, $event)">
+                    <div v-if="node.pods.length === 0" class="text-[#525c75] text-[10px] text-center my-auto py-1">Drop Image for Raw Pod</div>
+
+                    <div v-for="(pod, pIndex) in node.pods" :key="pod.id" class="border border-[#f8c555]/30 bg-[#1e2333] rounded px-2 py-1.5 flex items-start gap-2">
+                      <span class="text-[14px] mt-0.5 shrink-0">📦</span>
+                      <div class="flex flex-col flex-1 min-w-0">
+                        <input v-model="pod.name" class="bg-transparent border-none text-[#f8c555] font-bold text-[11px] font-['JetBrains_Mono',monospace] outline-none w-full text-ellipsis overflow-hidden" @input="generateK8sYaml"/>
+                        <input v-model="pod.image" class="bg-transparent border-none text-[#8891aa] text-[10px] font-['JetBrains_Mono',monospace] outline-none w-full text-ellipsis overflow-hidden" placeholder="image:latest" @input="generateK8sYaml"/>
+                      </div>
+                      <button class="text-[#ff4545] text-[12px] hover:bg-[#ff4545]/10 px-1.5 rounded shrink-0 ml-1 transition-colors" @click="node.pods.splice(pIndex, 1); generateK8sYaml()">✕</button>
+                    </div>
+                  </div>
                 </div>
-                <button class="field-add" @click="service.ports.push(''); generateYaml()">+ Add Port</button>
-              </div>
 
-              <div class="field-group">
-                <label>Environment <span class="field-hint">(KEY=VALUE)</span></label>
-                <div v-for="(env, ei) in service.environment" :key="ei" class="field-row">
-                  <input v-model="service.environment[ei]" placeholder="NODE_ENV=production" @input="generateYaml" />
-                  <button class="field-remove" @click="service.environment.splice(ei, 1); generateYaml()">✕</button>
+                <!-- Render Workloads -->
+                <div v-for="(wk, wIndex) in cluster.workloads" :key="wk._uid" class="border border-[#252a38] rounded-lg bg-[#181c27] flex flex-col overflow-hidden transition-all duration-150 hover:border-[#39ff8e]/50">
+                  <div class="flex items-center gap-2.5 py-2 px-3 bg-[#12151d] border-b border-[#252a38] cursor-pointer" @click="toggleK8sWorkload(wk._uid)">
+                    <span class="text-[16px] shrink-0" @click.stop>{{ getWorkloadIcon(wk.type) }}</span>
+                    <input v-model="wk.name" class="flex-1 min-w-0 bg-transparent text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[12px] font-bold outline-none border-b border-transparent focus:border-[#39ff8e] transition-colors" @click.stop @input="generateK8sYaml" />
+                    <span class="text-[9px] uppercase tracking-widest text-[#525c75] bg-[#252a38]/50 px-1.5 py-0.5 rounded">{{ wk.type }}</span>
+                    <button class="bg-transparent border-none text-[#525c75] cursor-pointer text-[10px] p-1 rounded transition-all duration-150 shrink-0 ml-1 hover:text-[#39ff8e] hover:bg-[#39ff8e]/10" @click.stop="toggleK8sWorkload(wk._uid)" >
+                      {{ activeK8sWorkload === wk._uid ? '▲' : '▼' }}
+                    </button>
+                    <button class="bg-transparent border-none text-[#525c75] cursor-pointer text-[12px] p-1 rounded transition-all duration-150 shrink-0 hover:text-[#ff4545] hover:bg-[#ff4545]/10" @click.stop="cluster.workloads.splice(wIndex, 1); generateK8sYaml()">✕</button>
+                  </div>
+
+                  <!-- Expandable Config -->
+                  <div v-if="activeK8sWorkload === wk._uid" class="p-3 flex flex-col gap-3 cursor-default bg-[#0d0f14]" @click.stop>
+                    <!-- Deployment / ReplicaSet Config -->
+                    <template v-if="['deployment', 'replicaset'].includes(wk.type)">
+                      <div class="flex gap-3">
+                        <div class="flex flex-col gap-1 flex-1">
+                          <label class="text-[9px] font-bold uppercase tracking-[1px] text-[#8891aa]">Image</label>
+                          <input class="w-full bg-[#12151d] border border-[#252a38] rounded text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[11px] py-1 px-2 outline-none focus:border-[#39ff8e]" v-model="wk.image" @input="generateK8sYaml" />
+                        </div>
+                        <div class="flex flex-col gap-1 w-[80px]">
+                          <label class="text-[9px] font-bold uppercase tracking-[1px] text-[#8891aa]">Replicas</label>
+                          <input type="number" min="1" class="w-full bg-[#12151d] border border-[#252a38] rounded text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[11px] py-1 px-2 outline-none focus:border-[#39ff8e]" v-model="wk.replicas" @input="generateK8sYaml" />
+                        </div>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold uppercase tracking-[1px] text-[#8891aa]">Container Ports</label>
+                        <div v-for="(port, pi) in wk.ports" :key="pi" class="flex gap-1.5">
+                          <input class="flex-1 bg-[#12151d] border border-[#252a38] rounded text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[11px] py-1 px-2 outline-none focus:border-[#39ff8e]" v-model="wk.ports[pi]" placeholder="80" @input="generateK8sYaml" />
+                          <button class="bg-transparent border border-[#252a38] text-[#525c75] rounded px-2 text-[10px] hover:text-[#ff4545] hover:border-[#ff4545]" @click="wk.ports.splice(pi, 1); generateK8sYaml()">✕</button>
+                        </div>
+                        <button class="bg-transparent border border-dashed border-[#2e3549] text-[#525c75] rounded py-1 px-2 text-[10px] font-bold mt-0.5 text-left hover:text-[#39ff8e] hover:border-[#39ff8e]" @click="wk.ports.push(''); generateK8sYaml()">+ Add Port</button>
+                      </div>
+                    </template>
+
+                    <!-- Service Config -->
+                    <template v-else-if="wk.type === 'service'">
+                      <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold uppercase tracking-[1px] text-[#8891aa]">Service Type</label>
+                        <select v-model="wk.serviceType" @change="generateK8sYaml" class="bg-[#12151d] border border-[#252a38] rounded text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[11px] py-1 px-2 outline-none focus:border-[#39ff8e]">
+                          <option value="ClusterIP">ClusterIP</option>
+                          <option value="NodePort">NodePort</option>
+                          <option value="LoadBalancer">LoadBalancer</option>
+                        </select>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold uppercase tracking-[1px] text-[#8891aa]">Ports <span class="font-normal normal-case tracking-normal text-[#525c75]">(port:targetPort)</span></label>
+                        <div v-for="(port, pi) in wk.ports" :key="pi" class="flex gap-1.5">
+                          <input class="flex-1 bg-[#12151d] border border-[#252a38] rounded text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[11px] py-1 px-2 outline-none focus:border-[#39ff8e]" v-model="wk.ports[pi]" placeholder="80:8080" @input="generateK8sYaml" />
+                          <button class="bg-transparent border border-[#252a38] text-[#525c75] rounded px-2 text-[10px] hover:text-[#ff4545] hover:border-[#ff4545]" @click="wk.ports.splice(pi, 1); generateK8sYaml()">✕</button>
+                        </div>
+                        <button class="bg-transparent border border-dashed border-[#2e3549] text-[#525c75] rounded py-1 px-2 text-[10px] font-bold mt-0.5 text-left hover:text-[#39ff8e] hover:border-[#39ff8e]" @click="wk.ports.push(''); generateK8sYaml()">+ Add Port Mapping</button>
+                      </div>
+                    </template>
+
+                    <!-- Ingress Config -->
+                    <template v-else-if="wk.type === 'ingress'">
+                      <div class="flex gap-3">
+                        <div class="flex flex-col gap-1 flex-1">
+                          <label class="text-[9px] font-bold uppercase tracking-[1px] text-[#8891aa]">Host</label>
+                          <input class="w-full bg-[#12151d] border border-[#252a38] rounded text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[11px] py-1 px-2 outline-none focus:border-[#39ff8e]" v-model="wk.host" placeholder="api.example.com" @input="generateK8sYaml" />
+                        </div>
+                        <div class="flex flex-col gap-1 flex-1">
+                          <label class="text-[9px] font-bold uppercase tracking-[1px] text-[#8891aa]">Path</label>
+                          <input class="w-full bg-[#12151d] border border-[#252a38] rounded text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[11px] py-1 px-2 outline-none focus:border-[#39ff8e]" v-model="wk.path" placeholder="/" @input="generateK8sYaml" />
+                        </div>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold uppercase tracking-[1px] text-[#8891aa]">Target Service</label>
+                        <select v-model="wk.targetService" @change="generateK8sYaml" class="bg-[#12151d] border border-[#252a38] rounded text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[11px] py-1 px-2 outline-none focus:border-[#39ff8e]">
+                          <option value="">Select Service...</option>
+                          <option v-for="svc in cluster.workloads.filter(w => w.type === 'service')" :key="svc._uid" :value="svc.name">{{ svc.name }}</option>
+                        </select>
+                      </div>
+                    </template>
+                  </div>
                 </div>
-                <button class="field-add" @click="service.environment.push(''); generateYaml()">+ Add Env</button>
-              </div>
 
-              <div class="field-group">
-                <label>Volumes <span class="field-hint">(host:container)</span></label>
-                <div v-for="(vol, vi) in service.volumes" :key="vi" class="field-row">
-                  <input v-model="service.volumes[vi]" placeholder="./data:/var/data" @input="generateYaml" />
-                  <button class="field-remove" @click="service.volumes.splice(vi, 1); generateYaml()">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Divider if both exist -->
+          <div v-if="k8sClusters.length > 0 && services.length > 0" class="h-px bg-[#252a38] w-full my-2"></div>
+
+          <!-- Docker Standalone Services Array -->
+          <div v-if="services.length > 0" class="flex flex-col gap-3">
+            <div class="flex items-center gap-2 px-1">
+              <span class="text-[14px]">🐳</span>
+              <span class="text-[13px] font-bold text-[#e8ecf5]">Standalone Docker Services</span>
+            </div>
+
+            <!-- Render Docker services grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+              <div
+                  v-for="(service, index) in services"
+                  :key="service._uid"
+                  class="border rounded-xl transition-all duration-150 overflow-hidden bg-[#181c27] hover:border-[#2e3549] flex flex-col"
+                  :class="activeService === service._uid ? 'border-[#00e5ff] shadow-[0_0_0_1px_rgba(0,229,255,0.12),0_4px_20px_rgba(0,229,255,0.06)]' : 'border-[#252a38]'"
+                  draggable="true"
+                  @dragstart="onCardDragStart($event, index)"
+                  @dragover.prevent="onCardDragOver($event, index)"
+                  @drop.prevent="onCardDrop($event, index)"
+              >
+                <div class="flex items-center gap-2.5 py-3 px-4 bg-[#12151d] border-b border-[#252a38] cursor-pointer" @click="toggleService(service._uid)">
+                  <span class="text-[20px] shrink-0 cursor-grab active:cursor-grabbing" @click.stop>{{ service.icon }}</span>
+                  <input
+                      v-model="service.name"
+                      class="flex-1 min-w-0 bg-transparent border-none border-b border-transparent text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[14px] font-bold outline-none py-0.5 px-1 transition-colors duration-150 focus:border-[#00e5ff] text-ellipsis overflow-hidden"
+                      placeholder="service-name"
+                      @click.stop
+                      @input="generateYaml"
+                  />
+                  <button class="bg-[#01e5ff]/4 border-none text-[#525c75] cursor-pointer text-[12px] p-1.5 rounded transition-all duration-150 shrink-0 ml-1 hover:text-[#00e5ff] hover:bg-[#00e5ff]/10" @click.stop="toggleService(service._uid)" >
+                    {{ activeService === service._uid ? '▲' : '▼' }}
+                  </button>
+                  <button class="bg-transparent border-none text-[#525c75] cursor-pointer text-[14px] p-1.5 rounded transition-all duration-150 shrink-0 hover:text-[#ff4545] hover:bg-[#ff4545]/10" @click.stop="removeService(index)">✕</button>
                 </div>
-                <button class="field-add" @click="service.volumes.push(''); generateYaml()">+ Add Volume</button>
-              </div>
 
-              <div class="field-group">
-                <label>Depends On</label>
-                <select v-model="service.depends_on" multiple @change="generateYaml" class="field-select">
-                  <option v-for="s in services.filter(s => s._uid !== service._uid)" :key="s._uid" :value="s.name">
-                    {{ s.name || '(unnamed)' }}
-                  </option>
-                </select>
-              </div>
+                <!-- Expanded Config -->
+                <div v-if="activeService === service._uid" class="px-4 pb-4 pt-3 flex flex-col gap-3 cursor-default" @click.stop>
+                  <div class="flex flex-col gap-1">
+                    <label class="text-[10px] font-bold uppercase tracking-[1px] text-[#8891aa]">Image</label>
+                    <input class="flex-1 bg-[#0d0f14] border border-[#252a38] rounded-md text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[11px] py-1.5 px-2.5 outline-none focus:border-[#00e5ff]" v-model="service.image" placeholder="nginx:latest" @input="generateYaml" />
+                  </div>
 
-              <div class="field-group">
-                <label>Restart Policy</label>
-                <select v-model="service.restart" @change="generateYaml" class="field-select-sm">
-                  <option value="">none</option>
-                  <option value="always">always</option>
-                  <option value="unless-stopped">unless-stopped</option>
-                  <option value="on-failure">on-failure</option>
-                </select>
-              </div>
+                  <div class="flex flex-col gap-1">
+                    <label class="text-[10px] font-bold uppercase tracking-[1px] text-[#8891aa]">Ports <span class="font-normal normal-case tracking-normal text-[#525c75]">(host:container)</span></label>
+                    <div v-for="(port, pi) in service.ports" :key="pi" class="flex gap-1.5">
+                      <input class="flex-1 bg-[#0d0f14] border border-[#252a38] rounded-md text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[11px] py-1 px-2 outline-none focus:border-[#00e5ff]" v-model="service.ports[pi]" placeholder="8080:80" @input="generateYaml" />
+                      <button class="bg-transparent border border-[#252a38] text-[#525c75] rounded-md px-2 cursor-pointer text-[12px] hover:text-[#ff4545] hover:border-[#ff4545]" @click="service.ports.splice(pi, 1); generateYaml()">✕</button>
+                    </div>
+                    <button class="bg-transparent border border-dashed border-[#2e3549] text-[#525c75] rounded-md py-1.5 px-2 cursor-pointer text-[11px] font-bold mt-1 text-left hover:text-[#00e5ff] hover:border-[#00e5ff]" @click="service.ports.push(''); generateYaml()">+ Add Port</button>
+                  </div>
 
-              <div class="field-group">
-                <label>Networks</label>
-                <div v-for="(net, ni) in service.networks" :key="ni" class="field-row">
-                  <input v-model="service.networks[ni]" placeholder="app-network" @input="generateYaml" />
-                  <button class="field-remove" @click="service.networks.splice(ni, 1); generateYaml()">✕</button>
+                  <!-- Environment -->
+                  <div class="flex flex-col gap-1">
+                    <label class="text-[10px] font-bold uppercase tracking-[1px] text-[#8891aa]">Environment <span class="font-normal normal-case tracking-normal text-[#525c75]">(KEY=VALUE)</span></label>
+                    <div v-for="(env, ei) in service.environment" :key="ei" class="flex gap-1.5">
+                      <input class="flex-1 bg-[#0d0f14] border border-[#252a38] rounded-md text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[11px] py-1 px-2 outline-none focus:border-[#00e5ff]" v-model="service.environment[ei]" placeholder="NODE_ENV=production" @input="generateYaml" />
+                      <button class="bg-transparent border border-[#252a38] text-[#525c75] rounded-md px-2 hover:text-[#ff4545] hover:border-[#ff4545]" @click="service.environment.splice(ei, 1); generateYaml()">✕</button>
+                    </div>
+                    <button class="bg-transparent border border-dashed border-[#2e3549] text-[#525c75] rounded-md py-1.5 px-2 cursor-pointer text-[11px] font-bold text-left hover:text-[#00e5ff] hover:border-[#00e5ff]" @click="service.environment.push(''); generateYaml()">+ Add Env</button>
+                  </div>
+
+                  <!-- Depends On -->
+                  <div class="flex flex-col gap-1">
+                    <label class="text-[10px] font-bold uppercase tracking-[1px] text-[#8891aa]">Depends On</label>
+                    <div v-for="(dep, di) in service.depends_on" :key="di" class="flex gap-1.5">
+                      <select class="flex-1 bg-[#0d0f14] border border-[#252a38] rounded-md text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[11px] py-1 px-2 outline-none focus:border-[#00e5ff]" v-model="service.depends_on[di]" @change="generateYaml">
+                        <option disabled value="">Select service...</option>
+                        <option v-for="other in services.filter(s => s._uid !== service._uid)" :key="other._uid" :value="other.name">{{ other.name }}</option>
+                      </select>
+                      <button class="bg-transparent border border-[#252a38] text-[#525c75] rounded-md px-2 hover:text-[#ff4545] hover:border-[#ff4545]" @click="service.depends_on.splice(di, 1); generateYaml()">✕</button>
+                    </div>
+                    <button class="bg-transparent border border-dashed border-[#2e3549] text-[#525c75] rounded-md py-1.5 px-2 cursor-pointer text-[11px] font-bold text-left hover:text-[#00e5ff] hover:border-[#00e5ff]" @click="service.depends_on.push(''); generateYaml()">+ Add Dependency</button>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-3 mt-1">
+                    <div class="flex flex-col gap-1">
+                      <label class="text-[10px] font-bold uppercase tracking-[1px] text-[#8891aa]">Restart</label>
+                      <select v-model="service.restart" @change="generateYaml" class="bg-[#0d0f14] border border-[#252a38] rounded-md text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[11px] py-1.5 px-2 outline-none">
+                        <option value="">none</option>
+                        <option value="always">always</option>
+                        <option value="unless-stopped">unless-stopped</option>
+                        <option value="on-failure">on-failure</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Healthcheck -->
+                  <div class="flex flex-col gap-1 mt-1 pt-2 border-t border-[#252a38]">
+                    <label class="text-[10px] font-bold uppercase tracking-[1px] text-[#8891aa]">Healthcheck</label>
+                    <input class="bg-[#0d0f14] border border-[#252a38] rounded-md text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[11px] py-1.5 px-2.5 outline-none focus:border-[#00e5ff] w-full mb-1" v-model="service.healthcheck.test" placeholder="Test (e.g. curl -f http://localhost)" @input="generateYaml" />
+                    <div class="grid grid-cols-3 gap-2">
+                      <input class="bg-[#0d0f14] border border-[#252a38] rounded-md text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[11px] py-1.5 px-2 outline-none focus:border-[#00e5ff]" v-model="service.healthcheck.interval" placeholder="Interval (30s)" @input="generateYaml" />
+                      <input class="bg-[#0d0f14] border border-[#252a38] rounded-md text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[11px] py-1.5 px-2 outline-none focus:border-[#00e5ff]" v-model="service.healthcheck.timeout" placeholder="Timeout (10s)" @input="generateYaml" />
+                      <input class="bg-[#0d0f14] border border-[#252a38] rounded-md text-[#e8ecf5] font-['JetBrains_Mono',monospace] text-[11px] py-1.5 px-2 outline-none focus:border-[#00e5ff]" v-model="service.healthcheck.retries" placeholder="Retries (3)" type="number" @input="generateYaml" />
+                    </div>
+                  </div>
                 </div>
-                <button class="field-add" @click="service.networks.push(''); generateYaml()">+ Add Network</button>
               </div>
+            </div>
+          </div>
+
+          <div v-if="k8sClusters.length === 0 && services.length === 0" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="text-center opacity-20">
+              <span class="text-[80px]">⬡</span>
+              <p class="text-[20px] font-bold tracking-widest mt-4">FREESTYLE CANVAS</p>
+              <p class="text-[14px]">Drag standalone Services or K8s Clusters here</p>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- DIVIDER -->
-      <div class="divider">
-        <div class="divider-line"></div>
-      </div>
-
-      <!-- RIGHT PANEL -->
-      <div class="panel panel-right">
-        <div class="panel-header">
-          <span class="panel-title">docker-compose.yml</span>
-          <div class="yaml-actions">
-            <span v-if="copied" class="copied-badge">Copied!</span>
-            <button class="btn-ghost" @click="copyYaml">
-              <span>⎘</span> Copy
-            </button>
-            <button class="btn-ghost" @click="downloadYaml">
-              <span>↓</span> Download
+      <!-- RIGHT PANEL (CODE OUTPUT) -->
+      <div class="flex flex-col overflow-hidden w-[450px] bg-[#0d0f14] border-l border-[#252a38] shrink-0">
+        <div class="flex items-center justify-between p-3 px-5 border-b border-[#252a38] shrink-0">
+          <div class="flex gap-2">
+            <button class="px-3 py-1 font-bold text-[11px] uppercase tracking-[1px] rounded" :class="outputTab === 'docker' ? 'bg-[#00e5ff] text-black' : 'text-[#8891aa] hover:bg-[#252a38]'" @click="outputTab = 'docker'">docker-compose.yml</button>
+            <button class="px-3 py-1 font-bold text-[11px] uppercase tracking-[1px] rounded" :class="outputTab === 'k8s' ? 'bg-[#39ff8e] text-black' : 'text-[#8891aa] hover:bg-[#252a38]'" @click="outputTab = 'k8s'">k8s-manifest.yaml</button>
+          </div>
+          <div class="flex items-center gap-2">
+            <span v-if="copiedAll" class="text-[11px] font-['JetBrains_Mono',monospace] text-[#39ff8e] animate-[fadeIn_0.2s]">Copied All!</span>
+            <button class="flex items-center gap-1.5 bg-transparent border border-[#2e3549] text-[#8891aa] py-1.5 px-3.5 rounded-lg text-[13px] font-semibold cursor-pointer transition-all duration-150 hover:text-[#e8ecf5] hover:border-[#00e5ff] hover:bg-[#00e5ff]/10" @click="copyYaml">
+              <span>⎘</span> Copy All
             </button>
           </div>
         </div>
 
-        <div class="yaml-pane">
-          <pre class="yaml-output"><code v-html="highlightedYaml"></code></pre>
+        <div class="flex-1 overflow-y-auto p-5 bg-[#0d0f14]">
+          <!-- Docker Tab -->
+          <pre v-if="outputTab === 'docker'" class="font-['JetBrains_Mono',monospace] text-[12.5px] leading-[1.8] text-[#8891aa] whitespace-pre tab-[2]"><code v-html="highlightedYaml"></code></pre>
+
+          <!-- K8s Tab (File by File) -->
+          <div v-else-if="outputTab === 'k8s'">
+            <pre v-if="k8sFiles.length === 0" class="font-['JetBrains_Mono',monospace] text-[12.5px] leading-[1.8] text-[#525c75] italic whitespace-pre"><code v-html="highlightedK8sYaml"></code></pre>
+            <div v-for="(file, index) in highlightedK8sFiles" :key="index" class="mb-5 border border-[#252a38] rounded-lg bg-[#12151d] overflow-hidden">
+              <div class="flex items-center justify-between px-3 py-2 bg-[#181c27] border-b border-[#252a38] text-[11px] font-['JetBrains_Mono',monospace] text-[#8891aa]">
+                <div class="flex items-center gap-2">
+                  <span class="text-[14px]">📄</span> {{ file.name }}
+                </div>
+                <div class="flex items-center gap-3">
+                  <span v-if="copiedFileIndex === index" class="text-[10px] text-[#39ff8e] animate-[fadeIn_0.2s]">Copied!</span>
+                  <button class="bg-transparent border-none text-[#525c75] hover:text-[#39ff8e] cursor-pointer transition-colors p-0 flex items-center justify-center text-[13px]" @click="copySingleFile(file, index)" title="Copy File">⎘</button>
+                  <button class="bg-transparent border-none text-[#525c75] hover:text-[#00e5ff] cursor-pointer transition-colors p-0 flex items-center justify-center text-[13px]" @click="downloadSingleFile(file)" title="Download File">↓</button>
+                </div>
+              </div>
+              <pre class="p-4 m-0 font-['JetBrains_Mono',monospace] text-[12.5px] leading-[1.8] text-[#8891aa] whitespace-pre overflow-x-auto"><code v-html="file.html"></code></pre>
+            </div>
+          </div>
         </div>
 
         <!-- Stats bar -->
-        <div class="yaml-stats">
+        <div class="flex items-center gap-2 py-2 px-5 border-t border-[#252a38] text-[11px] font-['JetBrains_Mono',monospace] text-[#525c75] shrink-0" v-show="outputTab === 'docker'">
           <span>{{ services.length }} services</span>
           <span>•</span>
           <span>{{ uniqueNetworks.length }} network{{ uniqueNetworks.length !== 1 ? 's' : '' }}</span>
           <span>•</span>
           <span>{{ uniqueVolumes.length }} volume{{ uniqueVolumes.length !== 1 ? 's' : '' }}</span>
           <span>•</span>
-          <span class="yaml-version">version: "3.8"</span>
+          <span class="text-[#00e5ff] ml-auto">version: "3.8"</span>
+        </div>
+        <div class="flex items-center gap-2 py-2 px-5 border-t border-[#252a38] text-[11px] font-['JetBrains_Mono',monospace] text-[#525c75] shrink-0" v-show="outputTab === 'k8s'">
+          <span>{{ k8sClusters.length }} clusters</span>
+          <span>•</span>
+          <span>{{ k8sTotalNodes }} nodes</span>
+          <span>•</span>
+          <span>{{ k8sTotalWorkloads }} workloads</span>
+          <span class="text-[#39ff8e] ml-auto">API: v1</span>
         </div>
       </div>
     </div>
@@ -192,9 +411,219 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 
+const outputTab = ref('docker') // 'docker' | 'k8s'
+
+// ─── K8s Presets ──────────────────────────────────────────────────────────────
+const k8sInfraPresets = [
+  { id: 'cluster', label: 'Cluster', type: 'cluster', icon: '⎈' },
+  { id: 'node', label: 'Worker Node', type: 'node', icon: '🖥️' },
+]
+
+// ─── K8s Workloads Presets ────────────────────────────────────────────────────
+const k8sWorkloadPresets = [
+  { id: 'deployment', label: 'Deployment', type: 'deployment', icon: '🔄' },
+  { id: 'replicaset', label: 'ReplicaSet', type: 'replicaset', icon: '📑' },
+  { id: 'service',    label: 'Service',    type: 'service',    icon: '🔌' },
+  { id: 'ingress',    label: 'Ingress',    type: 'ingress',    icon: '🚪' },
+]
+
+// ─── K8s State ────────────────────────────────────────────────────────────────
+const k8sClusters = ref([])
+const isK8sDragOver = ref(false)
+const k8sFiles = ref([])
+const copiedFileIndex = ref(null)
+const activeK8sWorkload = ref(null)
+let k8sUidCounter = 0
+
+// Universal Drag Info
+let dragItem = null
+let dragSource = null
+
+const k8sTotalNodes = computed(() => k8sClusters.value.reduce((acc, c) => acc + c.nodes.length, 0))
+const k8sTotalWorkloads = computed(() => k8sClusters.value.reduce((acc, c) => acc + c.workloads.length + c.nodes.reduce((acc2, n) => acc2 + n.pods.length, 0), 0))
+const k8sOutput = ref('')
+
+function getNextK8sName(items, prefix) {
+  let i = 1;
+  while (items.some(item => item.name === `${prefix}-${i}`)) {
+    i++;
+  }
+  return `${prefix}-${i}`;
+}
+
+function getWorkloadIcon(type) {
+  const preset = k8sWorkloadPresets.find(p => p.type === type)
+  return preset ? preset.icon : '📦'
+}
+
+function onPaletteDragStart(event, preset) {
+  dragSource = 'palette'
+  dragItem = preset
+  event.dataTransfer.effectAllowed = 'copy'
+}
+
+function onItemDragOver(event) {
+  event.dataTransfer.dropEffect = 'copy'
+}
+
+function onCanvasDrop(event) {
+  isDragOver.value = false
+  if (dragSource === 'palette' && dragItem) {
+    if (dragItem.type === 'cluster') {
+      k8sClusters.value.push({
+        id: ++k8sUidCounter,
+        name: getNextK8sName(k8sClusters.value, 'cluster'),
+        nodes: [],
+        workloads: []
+      })
+      generateK8sYaml()
+    } else if (['node', 'deployment', 'replicaset', 'service', 'ingress'].includes(dragItem.type)) {
+      // Do nothing if K8s specific items dropped on free canvas (they require a cluster)
+    } else {
+      addService(dragItem) // Standalone Docker Service if apps dropped on canvas
+    }
+  }
+  dragSource = null
+  dragItem = null
+}
+
+function onClusterDrop(cluster, event) {
+  if (!dragItem) return;
+
+  if (dragItem.type === 'node') {
+    cluster.nodes.push({
+      id: ++k8sUidCounter,
+      name: getNextK8sName(cluster.nodes, 'node'),
+      pods: []
+    })
+    generateK8sYaml()
+  } else if (['deployment', 'replicaset', 'service', 'ingress'].includes(dragItem.type)) {
+    cluster.workloads.push({
+      _uid: ++k8sUidCounter,
+      type: dragItem.type,
+      name: getNextK8sName(cluster.workloads, dragItem.id ? dragItem.id : dragItem.type),
+      image: dragItem.image || 'nginx:latest',
+      replicas: 1,
+      ports: dragItem.defaultPorts ? dragItem.defaultPorts.map(p => p.split(':')[0]) : [],
+      serviceType: 'ClusterIP',
+      host: 'example.com',
+      path: '/',
+      targetService: ''
+    });
+    generateK8sYaml();
+  }
+  event.stopPropagation();
+}
+
+function onPodDrop(node, event) {
+  if (dragItem && !['node', 'cluster', 'deployment', 'replicaset', 'service', 'ingress'].includes(dragItem.type)) {
+    const podPrefix = `pod-${dragItem.id || 'custom'}`;
+    node.pods.push({
+      id: ++k8sUidCounter,
+      name: getNextK8sName(node.pods, podPrefix),
+      image: dragItem.image || 'ubuntu:latest'
+    })
+    generateK8sYaml()
+  }
+  event.stopPropagation()
+}
+
+function toggleK8sWorkload(uid) {
+  activeK8sWorkload.value = activeK8sWorkload.value === uid ? null : uid
+}
+
+function generateK8sYaml() {
+  if (k8sClusters.value.length === 0) {
+    k8sOutput.value = '# Build your K8s topology\n# Drop Clusters, then add Nodes and Workloads'
+    k8sFiles.value = []
+    return
+  }
+
+  const files = []
+
+  k8sClusters.value.forEach(cluster => {
+    // Generate namespace file
+    files.push({
+      name: `namespace-${cluster.name}.yaml`,
+      content: `apiVersion: v1\nkind: Namespace\nmetadata:\n  name: ${cluster.name}`
+    })
+
+    // Generate Workloads
+    cluster.workloads.forEach(w => {
+      let content = '';
+      if (w.type === 'deployment' || w.type === 'replicaset') {
+        const kind = w.type === 'deployment' ? 'Deployment' : 'ReplicaSet';
+        content = `apiVersion: apps/v1\nkind: ${kind}\nmetadata:\n  name: ${w.name}\n  namespace: ${cluster.name}\nspec:\n  replicas: ${w.replicas}\n  selector:\n    matchLabels:\n      app: ${w.name}\n  template:\n    metadata:\n      labels:\n        app: ${w.name}\n    spec:\n      containers:\n        - name: main\n          image: ${w.image}`;
+        if (w.ports && w.ports.length > 0) {
+          content += `\n          ports:`;
+          w.ports.forEach(p => {
+            const pt = p.split(':')[1] || p;
+            if(pt) content += `\n            - containerPort: ${pt}`;
+          });
+        }
+      } else if (w.type === 'service') {
+        content = `apiVersion: v1\nkind: Service\nmetadata:\n  name: ${w.name}\n  namespace: ${cluster.name}\nspec:\n  type: ${w.serviceType}\n  selector:\n    app: ${w.name.replace('-svc', '')}\n  ports:`;
+        if (w.ports && w.ports.length > 0) {
+          w.ports.forEach(p => {
+            const pts = p.split(':');
+            const port = pts[0];
+            const target = pts[1] || port;
+            if(port) content += `\n    - port: ${port}\n      targetPort: ${target}`;
+          });
+        } else {
+          content += `\n    - port: 80\n      targetPort: 80`;
+        }
+      } else if (w.type === 'ingress') {
+        content = `apiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: ${w.name}\n  namespace: ${cluster.name}\nspec:\n  rules:\n    - host: ${w.host || 'example.com'}\n      http:\n        paths:\n          - path: ${w.path || '/'}\n            pathType: Prefix\n            backend:\n              service:\n                name: ${w.targetService || 'my-service'}\n                port:\n                  number: 80`;
+      }
+      files.push({ name: `${w.type}-${w.name}.yaml`, content });
+    });
+
+    // Generate Raw Pods in nodes
+    cluster.nodes.forEach(node => {
+      node.pods.forEach(pod => {
+        files.push({
+          name: `pod-${pod.name}.yaml`,
+          content: `apiVersion: v1\nkind: Pod\nmetadata:\n  name: ${pod.name}\n  namespace: ${cluster.name}\n  labels:\n    node: ${node.name}\nspec:\n  nodeName: ${node.name} # Simulated scheduling\n  containers:\n    - name: main\n      image: ${pod.image}`
+        })
+      })
+    })
+  })
+
+  k8sFiles.value = files
+  k8sOutput.value = files.map(f => f.content).join('\n---\n')
+}
+
+const highlightedK8sYaml = computed(() => {
+  return k8sOutput.value
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/^(#.*)$/gm, "<span class='y-comment'>$1</span>")
+      .replace(/^(\s*)([\w-]+)(:)(?=\s|$)/gm, "$1<span class='y-key'>$2</span><span class='y-colon'>$3</span>")
+      .replace(/"([^"]*)"/g, "<span class='y-string'>\"$1\"</span>")
+      .replace(/\b(true|false|null)\b/g, "<span class='y-bool'>$1</span>")
+      .replace(/(\b\d+\b)/g, "<span class='y-num'>$1</span>")
+})
+
+const highlightedK8sFiles = computed(() => {
+  return k8sFiles.value.map(file => {
+    return {
+      name: file.name,
+      content: file.content,
+      html: file.content
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/^(#.*)$/gm, "<span class='y-comment'>$1</span>")
+          .replace(/^(\s*)([\w-]+)(:)(?=\s|$)/gm, "$1<span class='y-key'>$2</span><span class='y-colon'>$3</span>")
+          .replace(/"([^"]*)"/g, "<span class='y-string'>\"$1\"</span>")
+          .replace(/\b(true|false|null)\b/g, "<span class='y-bool'>$1</span>")
+          .replace(/(\b\d+\b)/g, "<span class='y-num'>$1</span>")
+    }
+  })
+})
+
+
 // ─── Presets ──────────────────────────────────────────────────────────────────
 const presets = [
-  { id: 'nginx',    label: 'Nginx',      image: 'nginx:alpine',          icon: '🌐', defaultPorts: ['80:80'], defaultEnv: [] },
+  { id: 'nginx',    label: 'Nginx',      image: 'nginx:alpine',         icon: '🌐', defaultPorts: ['80:80'], defaultEnv: [] },
   { id: 'postgres', label: 'PostgreSQL', image: 'postgres:16-alpine',    icon: '🐘', defaultPorts: ['5432:5432'], defaultEnv: ['POSTGRES_PASSWORD=secret','POSTGRES_DB=app'] },
   { id: 'mysql',    label: 'MySQL',      image: 'mysql:8',               icon: '🐬', defaultPorts: ['3306:3306'], defaultEnv: ['MYSQL_ROOT_PASSWORD=secret','MYSQL_DATABASE=app'] },
   { id: 'redis',    label: 'Redis',      image: 'redis:7-alpine',        icon: '🔴', defaultPorts: ['6379:6379'], defaultEnv: [] },
@@ -213,18 +642,12 @@ const services       = ref([])
 const yamlOutput     = ref('')
 const activeService  = ref(null)
 const isDragOver     = ref(false)
-const copied         = ref(false)
-let   dragSource     = null   // 'palette' | 'card'
-let   dragPreset     = null
+const copiedAll      = ref(false)
 let   dragCardIndex  = null
 let   uidCounter     = 0
 
 // ─── Drag from Palette ────────────────────────────────────────────────────────
-function onPaletteDragStart(event, preset) {
-  dragSource = 'palette'
-  dragPreset = preset
-  event.dataTransfer.effectAllowed = 'copy'
-}
+// Logic already merged into onPaletteDragStart above
 
 // ─── Drag from Card ───────────────────────────────────────────────────────────
 function onCardDragStart(event, index) {
@@ -253,19 +676,17 @@ function onCardDrop(event, targetIndex) {
   event.stopPropagation()
 }
 
-// ─── Drop on Canvas ───────────────────────────────────────────────────────────
-function onCanvasDrop(event) {
-  isDragOver.value = false
-  if (dragSource === 'palette' && dragPreset) {
-    addService(dragPreset)
+function getNextServiceName(servicesList, baseId) {
+  if (!servicesList.some(s => s.name === baseId)) return baseId;
+  let i = 2;
+  while (servicesList.some(s => s.name === `${baseId}-${i}`)) {
+    i++;
   }
-  dragSource  = null
-  dragPreset  = null
+  return `${baseId}-${i}`;
 }
 
 function addService(preset) {
-  const countSame = services.value.filter(s => s._baseId === preset.id).length
-  const name      = countSame === 0 ? preset.id : `${preset.id}-${countSame + 1}`
+  const name = getNextServiceName(services.value, preset.id);
   services.value.push({
     _uid:        ++uidCounter,
     _baseId:     preset.id,
@@ -278,6 +699,7 @@ function addService(preset) {
     networks:    [],
     depends_on:  [],
     restart:     '',
+    healthcheck: { test: '', interval: '', timeout: '', retries: '' }
   })
   generateYaml()
 }
@@ -294,9 +716,11 @@ function toggleService(uid) {
 }
 
 function clearAll() {
-  services.value      = []
+  services.value = []
   activeService.value = null
+  k8sClusters.value = []
   generateYaml()
+  generateK8sYaml()
 }
 
 // ─── Computed ─────────────────────────────────────────────────────────────────
@@ -372,6 +796,19 @@ function generateYaml() {
       lines.push(`    restart: ${svc.restart}`)
     }
 
+    if (svc.healthcheck && svc.healthcheck.test) {
+      lines.push('    healthcheck:')
+      let testVal = svc.healthcheck.test;
+      if (testVal.startsWith('[') || testVal.startsWith('NONE') || testVal.startsWith('CMD') || testVal.startsWith('CMD-SHELL')) {
+        lines.push(`      test: ${testVal}`)
+      } else {
+        lines.push(`      test: ["CMD-SHELL", "${testVal}"]`)
+      }
+      if (svc.healthcheck.interval) lines.push(`      interval: ${svc.healthcheck.interval}`)
+      if (svc.healthcheck.timeout) lines.push(`      timeout: ${svc.healthcheck.timeout}`)
+      if (svc.healthcheck.retries) lines.push(`      retries: ${svc.healthcheck.retries}`)
+    }
+
     lines.push('')
   }
 
@@ -396,423 +833,77 @@ function generateYaml() {
 const highlightedYaml = computed(() => {
   return yamlOutput.value
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/^(#.*)$/gm, '<span class="y-comment">$1</span>')
-      .replace(/^(\s*)([\w-]+)(:)/gm, '$1<span class="y-key">$2</span><span class="y-colon">$3</span>')
-      .replace(/"([^"]*)"/g, '<span class="y-string">"$1"</span>')
-      .replace(/\b(true|false|null)\b/g, '<span class="y-bool">$1</span>')
-      .replace(/(\b\d+\b)/g, '<span class="y-num">$1</span>')
+      .replace(/^(#.*)$/gm, "<span class='y-comment'>$1</span>")
+      .replace(/^(\s*)([\w-]+)(:)/gm, "$1<span class='y-key'>$2</span><span class='y-colon'>$3</span>")
+      .replace(/"([^"]*)"/g, "<span class='y-string'>\"$1\"</span>")
+      .replace(/\b(true|false|null)\b/g, "<span class='y-bool'>$1</span>")
+      .replace(/(\b\d+\b)/g, "<span class='y-num'>$1</span>")
 })
 
-// ─── Clipboard / Download ─────────────────────────────────────────────────────
+// ─── Clipboard / Download (Global) ────────────────────────────────────────────
 function copyYaml() {
-  navigator.clipboard.writeText(yamlOutput.value).then(() => {
-    copied.value = true
-    setTimeout(() => (copied.value = false), 2000)
+  const content = outputTab.value === 'docker' ? yamlOutput.value : k8sOutput.value;
+  navigator.clipboard.writeText(content).then(() => {
+    copiedAll.value = true
+    setTimeout(() => (copiedAll.value = false), 2000)
   })
 }
 
 function downloadYaml() {
-  const blob = new Blob([yamlOutput.value], { type: 'text/yaml' })
+  const content = outputTab.value === 'docker' ? yamlOutput.value : k8sOutput.value;
+  const fileName = outputTab.value === 'docker' ? 'docker-compose.yml' : 'k8s-manifest.yaml';
+
+  const blob = new Blob([content], { type: 'text/yaml' })
   const a    = document.createElement('a')
   a.href     = URL.createObjectURL(blob)
-  a.download = 'docker-compose.yml'
+  a.download = fileName
   a.click()
   URL.revokeObjectURL(a.href)
 }
 
+// ─── Clipboard / Download (Single K8s File) ───────────────────────────────────
+function copySingleFile(file, index) {
+  navigator.clipboard.writeText(file.content).then(() => {
+    copiedFileIndex.value = index;
+    setTimeout(() => { copiedFileIndex.value = null }, 2000);
+  });
+}
+
+function downloadSingleFile(file) {
+  const blob = new Blob([file.content], { type: 'text/yaml' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = file.name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
-onMounted(() => generateYaml())
+onMounted(() => {
+  generateYaml()
+  generateK8sYaml()
+})
 </script>
 
-<style>
+<style scoped>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap');
 
-:root {
-  --bg:          #0d0f14;
-  --bg-panel:    #12151d;
-  --bg-card:     #181c27;
-  --bg-hover:    #1e2333;
-  --bg-active:   #1a2035;
-  --border:      #252a38;
-  --border-lit:  #2e3549;
-  --accent:      #00e5ff;
-  --accent-dim:  #00b8cc;
-  --accent-glow: rgba(0,229,255,0.12);
-  --green:       #39ff8e;
-  --orange:      #ff9520;
-  --red:         #ff4545;
-  --txt-1:       #e8ecf5;
-  --txt-2:       #8891aa;
-  --txt-3:       #525c75;
-  --radius:      8px;
-  --radius-lg:   12px;
+/* YAML syntax highlighting classes injected via v-html */
+:deep(.y-key)   { color: #79b8ff; }
+:deep(.y-colon) { color: #525c75; }
+:deep(.y-string) { color: #9ecbff; }
+:deep(.y-comment) { color: #525c75; font-style: italic; }
+:deep(.y-bool)  { color: #ff9520; }
+:deep(.y-num)   { color: #f8c555; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-.app-root {
-  font-family: 'Syne', sans-serif;
-  background: var(--bg);
-  color: var(--txt-1);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* ── Top Bar ── */
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
-  height: 52px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-panel);
-  flex-shrink: 0;
-  z-index: 10;
-}
-.topbar-left { display: flex; align-items: center; gap: 10px; }
-.logo-icon { font-size: 22px; color: var(--accent); line-height: 1; }
-.logo-text { font-size: 17px; font-weight: 800; letter-spacing: -0.5px; color: var(--txt-1); }
-.logo-badge {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 20px;
-  background: var(--accent-glow);
-  border: 1px solid rgba(0,229,255,0.25);
-  color: var(--accent);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-.topbar-right { display: flex; gap: 8px; }
-
-/* ── Buttons ── */
-.btn-ghost {
-  display: flex; align-items: center; gap: 6px;
-  background: transparent;
-  border: 1px solid var(--border-lit);
-  color: var(--txt-2);
-  padding: 6px 14px;
-  border-radius: var(--radius);
-  font-family: 'Syne', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.btn-ghost:hover { color: var(--txt-1); border-color: var(--accent); background: var(--accent-glow); }
-.btn-primary {
-  display: flex; align-items: center; gap: 6px;
-  background: var(--accent);
-  border: none;
-  color: #000;
-  padding: 6px 16px;
-  border-radius: var(--radius);
-  font-family: 'Syne', sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.btn-primary:hover { background: var(--accent-dim); }
-
-/* ── Workspace ── */
-.workspace {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-  height: calc(100vh - 52px);
-}
-
-/* ── Panels ── */
-.panel {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.panel-left {
-  width: 50%;
-  border-right: 1px solid var(--border);
-  background: var(--bg-panel);
-  overflow-y: auto;
-}
-.panel-right {
-  width: 50%;
-  background: var(--bg);
-}
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.panel-title {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: var(--txt-2);
-}
-.panel-hint {
-  font-size: 11px;
-  color: var(--txt-3);
-  font-family: 'JetBrains Mono', monospace;
-}
-.service-count {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  color: var(--accent);
-}
-
-/* ── Divider ── */
-.divider { position: relative; width: 0; }
-.divider-line {
-  position: absolute;
-  top: 0; left: -1px;
-  width: 2px;
-  height: 100%;
-  background: linear-gradient(180deg, transparent, var(--accent) 30%, var(--accent) 70%, transparent);
-  opacity: 0.2;
-}
-
-/* ── Palette ── */
-.palette {
-  padding: 12px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  border-bottom: 1px solid var(--border);
-}
-.palette-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--bg-card);
-  cursor: grab;
-  transition: all 0.15s;
-  user-select: none;
-}
-.palette-item:hover {
-  border-color: var(--accent);
-  background: var(--bg-hover);
-  box-shadow: 0 0 0 1px var(--accent-glow);
-}
-.palette-item:active { cursor: grabbing; }
-.palette-icon { font-size: 18px; flex-shrink: 0; }
-.palette-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.palette-name { font-size: 12px; font-weight: 700; color: var(--txt-1); }
-.palette-image { font-size: 10px; color: var(--txt-3); font-family: 'JetBrains Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.palette-drag-hint { color: var(--txt-3); font-size: 14px; flex-shrink: 0; }
-
-/* ── Canvas ── */
-.canvas-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px 8px;
-}
-.canvas {
-  flex: 1;
-  padding: 8px 12px 12px;
-  min-height: 200px;
-  transition: background 0.15s;
-  overflow-y: auto;
-}
-.canvas-dragover {
-  background: rgba(0, 229, 255, 0.03);
-  outline: 2px dashed rgba(0,229,255,0.25);
-  outline-offset: -8px;
-  border-radius: var(--radius);
-}
-.canvas-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 48px 20px;
-  color: var(--txt-3);
-}
-.canvas-empty-icon { font-size: 36px; opacity: 0.3; }
-.canvas-empty p { font-size: 13px; font-weight: 600; }
-.canvas-empty-sub { font-size: 11px; font-family: 'JetBrains Mono', monospace; opacity: 0.6; }
-
-/* ── Service Cards ── */
-.service-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--bg-card);
-  margin-bottom: 6px;
-  cursor: pointer;
-  transition: all 0.15s;
-  overflow: hidden;
-}
-.service-card:hover { border-color: var(--border-lit); }
-.service-card--active {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent-glow), 0 4px 20px rgba(0,229,255,0.06);
-}
-.service-card-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-}
-.service-icon { font-size: 18px; flex-shrink: 0; }
-.service-name-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid transparent;
-  color: var(--txt-1);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  font-weight: 500;
-  outline: none;
-  padding: 2px 4px;
-  transition: border-color 0.15s;
-}
-.service-name-input:focus { border-bottom-color: var(--accent); }
-.card-remove {
-  background: transparent;
-  border: none;
-  color: var(--txt-3);
-  cursor: pointer;
-  font-size: 12px;
-  padding: 4px;
-  border-radius: 4px;
-  transition: all 0.15s;
-  flex-shrink: 0;
-}
-.card-remove:hover { color: var(--red); background: rgba(255,69,69,0.1); }
-
-/* ── Card Body ── */
-.service-card-body {
-  padding: 0 12px 12px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 2px;
-  padding-top: 10px;
-}
-.field-group { display: flex; flex-direction: column; gap: 4px; }
-.field-group label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--txt-2);
-}
-.field-hint { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--txt-3); }
-.field-row { display: flex; gap: 4px; }
-.field-group input, .field-row input {
-  flex: 1;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  color: var(--txt-1);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  padding: 5px 8px;
-  outline: none;
-  transition: border-color 0.15s;
-}
-.field-group input:focus, .field-row input:focus { border-color: var(--accent); }
-.field-remove {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--txt-3);
-  border-radius: 5px;
-  padding: 0 6px;
-  cursor: pointer;
-  font-size: 10px;
-  transition: all 0.15s;
-}
-.field-remove:hover { color: var(--red); border-color: var(--red); }
-.field-add {
-  background: transparent;
-  border: 1px dashed var(--border-lit);
-  color: var(--txt-3);
-  border-radius: 5px;
-  padding: 4px 8px;
-  cursor: pointer;
-  font-size: 11px;
-  font-family: 'Syne', sans-serif;
-  transition: all 0.15s;
-  text-align: left;
-}
-.field-add:hover { color: var(--accent); border-color: var(--accent); }
-.field-select, .field-select-sm {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  color: var(--txt-1);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  padding: 5px 8px;
-  outline: none;
-}
-.field-select { min-height: 60px; }
-.field-select-sm { height: 30px; }
-
-/* ── YAML Panel ── */
-.yaml-actions { display: flex; align-items: center; gap: 8px; }
-.copied-badge {
-  font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--green);
-  animation: fadeIn 0.2s;
-}
-@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
-
-.yaml-pane {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  background: var(--bg);
-}
-.yaml-output {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12.5px;
-  line-height: 1.8;
-  color: var(--txt-2);
-  white-space: pre;
-  tab-size: 2;
-}
-
-/* YAML syntax highlighting */
-.y-key   { color: #79b8ff; }
-.y-colon { color: var(--txt-3); }
-.y-string { color: #9ecbff; }
-.y-comment { color: var(--txt-3); font-style: italic; }
-.y-bool  { color: var(--orange); }
-.y-num   { color: #f8c555; }
-
-.yaml-stats {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 20px;
-  border-top: 1px solid var(--border);
-  font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--txt-3);
-  flex-shrink: 0;
-}
-.yaml-version { color: var(--accent); margin-left: auto; }
-
-/* ── Scrollbars ── */
+/* ── Custom Scrollbars (Tailwind natively doesn't handle scrollbars easily without plugins) ── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-lit); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: var(--txt-3); }
+::-webkit-scrollbar-thumb { background: #2e3549; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #525c75; }
 </style>
